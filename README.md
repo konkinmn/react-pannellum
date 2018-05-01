@@ -1,0 +1,1 @@
+Pannellum react component
