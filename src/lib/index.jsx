@@ -1,10 +1,12 @@
 import React, { Component } from 'react';
 import { PanoView, Container } from './styles';
 
-import LibPannellum from './global-pannelum-scripts/libpannellum.js';
-import Pannellum from './global-pannelum-scripts/pannellum.js';
-
 import './pannellum.css';
+
+const CAN_USE_DOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
+const LibPannellum = CAN_USE_DOM ? require('./global-pannelum-scripts/libpannellum.js').default : null;
+const Pannellum = CAN_USE_DOM ? require('./global-pannelum-scripts/pannellum.js').default : null;
+
 
 class Panellum extends Component {
   static defaultProps = {
@@ -18,6 +20,10 @@ class Panellum extends Component {
   };
 
   componentDidMount() {
+    if (!Pannellum || !LibPannellum) {
+      return;
+    }
+
     window.libpannellum = LibPannellum(window, document);
     window.pannellum = Pannellum(window, document);
 
