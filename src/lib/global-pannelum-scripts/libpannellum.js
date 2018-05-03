@@ -1,6 +1,8 @@
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 /*
  * libpannellum - A WebGL and CSS 3D transform based Panorama Renderer
- * Copyright (c) 2012-2018 Matthew Petroff
+ * Copyright (c) 2012-2016 Matthew Petroff
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +23,7 @@
  * THE SOFTWARE.
  */
 
+
 export default function (window, document, undefined) {
 
   'use strict';
@@ -30,6 +33,7 @@ export default function (window, document, undefined) {
    * @constructor
    * @param {HTMLElement} container - The container element for the renderer.
    */
+
   function Renderer(container) {
     var canvas = document.createElement('canvas');
     canvas.style.width = canvas.style.height = '100%';
@@ -42,7 +46,6 @@ export default function (window, document, undefined) {
     var pose;
     var image, imageType, dynamic;
     var texCoordBuffer, cubeVertBuf, cubeVertTexCoordBuf, cubeVertIndBuf;
-    var globalParams;
 
     /**
      * Initialize renderer.
@@ -64,19 +67,10 @@ export default function (window, document, undefined) {
      */
     this.init = function (_image, _imageType, _dynamic, haov, vaov, voffset, callback, params) {
       // Default argument for image type
-      if (_imageType === undefined)
-        _imageType = 'equirectangular';
-
-      if (_imageType != 'equirectangular' && _imageType != 'cubemap' &&
-        _imageType != 'multires') {
-        console.log('Error: invalid image type specified!');
-        throw {type: 'config error'};
-      }
-
+      if ((typeof _imageType === 'undefined' ? 'undefined' : _typeof(_imageType)) === undefined) _imageType = 'equirectangular';
       imageType = _imageType;
       image = _image;
       dynamic = _dynamic;
-      globalParams = params || {};
 
       // Clear old data
       if (program) {
@@ -90,83 +84,32 @@ export default function (window, document, undefined) {
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-        if (program.texture)
-          gl.deleteTexture(program.texture);
-        if (program.nodeCache)
-          for (var i = 0; i < program.nodeCache.length; i++)
-            gl.deleteTexture(program.nodeCache[i].texture);
-        gl.deleteProgram(program);
+        if (program.texture) gl.deleteTexture(program.texture);
+        if (program.nodeCache) for (var i = 0; i < program.nodeCache.length; i++) {
+          gl.deleteTexture(program.nodeCache[i].texture);
+        }gl.deleteProgram(program);
         program = undefined;
       }
       pose = undefined;
 
       var s;
-      var faceMissing = false;
-      var cubeImgWidth;
-      if (imageType == 'cubemap') {
-        for (s = 0; s < 6; s++) {
-          if (image[s].width > 0) {
-            if (cubeImgWidth === undefined)
-              cubeImgWidth = image[s].width;
-            if (cubeImgWidth != image[s].width)
-              console.log('Cube faces have inconsistent widths: ' + cubeImgWidth + ' vs. ' + image[s].width);
-          } else
-            faceMissing = true;
-        }
-      }
-
-      function fillMissingFaces(imgSize) {
-        if (faceMissing) { // Fill any missing fallback/cubemap faces with background
-          var nbytes = imgSize * imgSize * 4; // RGB, plus non-functional alpha
-          var imageArray = new Uint8ClampedArray(nbytes);
-          var rgb = params.backgroundColor ? params.backgroundColor : [0, 0, 0];
-          rgb[0] *= 255;
-          rgb[1] *= 255;
-          rgb[2] *= 255;
-          // Maybe filling could be done faster, see e.g. https://stackoverflow.com/questions/1295584/most-efficient-way-to-create-a-zero-filled-javascript-array
-          for (var i = 0; i < nbytes; i++) {
-            imageArray[i++] = rgb[0];
-            imageArray[i++] = rgb[1];
-            imageArray[i++] = rgb[2];
-          }
-          var backgroundSquare = new ImageData(imageArray, imgSize, imgSize);
-          for (s = 0; s < 6; s++) {
-            if (image[s].width == 0)
-              image[s] = backgroundSquare;
-          }
-        }
-      }
 
       // This awful browser specific test exists because iOS 8/9 and IE 11
       // don't display non-power-of-two cubemap textures but also don't
-      // throw an error (tested on an iPhone 5c / iOS 8.1.3 / iOS 9.2 /
-      // iOS 10.3.1).
+      // throw an error (tested on an iPhone 5c / iOS 8.1.3 / iOS 9.2).
       // Therefore, the WebGL context is never created for these browsers for
       // NPOT cubemaps, and the CSS 3D transform fallback renderer is used
       // instead.
-      if (!(imageType == 'cubemap' &&
-        (cubeImgWidth & (cubeImgWidth - 1)) !== 0 &&
-        (navigator.userAgent.toLowerCase().match(/(iphone|ipod|ipad).* os 8_/) ||
-          navigator.userAgent.toLowerCase().match(/(iphone|ipod|ipad).* os 9_/) ||
-          navigator.userAgent.toLowerCase().match(/(iphone|ipod|ipad).* os 10_/) ||
-          navigator.userAgent.match(/Trident.*rv[ :]*11\./)))) {
+      if (!(imageType == 'cubemap' && (image[0].width & image[0].width - 1) !== 0 && (navigator.userAgent.toLowerCase().match(/(iphone|ipod|ipad).* os 8_/) || navigator.userAgent.toLowerCase().match(/(iphone|ipod|ipad).* os 9_/) || navigator.userAgent.match(/Trident.*rv[ :]*11\./)))) {
         // Enable WebGL on canvas
-        if (!gl)
-          gl = canvas.getContext('experimental-webgl', {alpha: false, depth: false});
-        if (gl && gl.getError() == 1286)
-          handleWebGLError1286();
+        if (!gl) gl = canvas.getContext('experimental-webgl', { alpha: false, depth: false });
       }
 
       // If there is no WebGL, fall back to CSS 3D transform renderer.
-      // This will discard the image loaded so far and load the fallback image.
       // While browser specific tests are usually frowned upon, the
       // fallback viewer only really works with WebKit/Blink and IE 10/11
       // (it doesn't work properly in Firefox).
-      if (!gl && ((imageType == 'multires' && image.hasOwnProperty('fallbackPath')) ||
-        imageType == 'cubemap') &&
-        ('WebkitAppearance' in document.documentElement.style ||
-          navigator.userAgent.match(/Trident.*rv[ :]*11\./) ||
-          navigator.appVersion.indexOf('MSIE 10') !== -1)) {
+      if (!gl && (imageType == 'multires' && image.hasOwnProperty('fallbackPath') || imageType == 'cubemap') && ('WebkitAppearance' in document.documentElement.style || navigator.userAgent.match(/Trident.*rv[ :]*11\./) || navigator.appVersion.indexOf('MSIE 10') !== -1)) {
         // Remove old world if it exists
         if (world) {
           container.removeChild(world);
@@ -185,7 +128,7 @@ export default function (window, document, undefined) {
         }
         var sides = ['f', 'r', 'b', 'l', 'u', 'd'];
         var loaded = 0;
-        var onLoad = function () {
+        var onLoad = function onLoad() {
           // Draw image on canvas
           var faceCanvas = document.createElement('canvas');
           faceCanvas.className = 'pnlm-face pnlm-' + sides[this.side] + 'face';
@@ -228,30 +171,20 @@ export default function (window, document, undefined) {
           }
           for (i = 1; i < faceCanvas.height - 1; i++) {
             for (j = 0; j < 4; j++) {
-              data[(i * faceCanvas.width) * 4 + j] = data[(i * faceCanvas.width + 1) * 4 + j];
+              data[i * faceCanvas.width * 4 + j] = data[(i * faceCanvas.width + 1) * 4 + j];
               data[((i + 1) * faceCanvas.width - 1) * 4 + j] = data[((i + 1) * faceCanvas.width - 2) * 4 + j];
             }
           }
           for (j = 0; j < 4; j++) {
             data[j] = data[(faceCanvas.width + 1) * 4 + j];
             data[(faceCanvas.width - 1) * 4 + j] = data[(faceCanvas.width * 2 - 2) * 4 + j];
-            data[(faceCanvas.width * (faceCanvas.height - 1)) * 4 + j] = data[(faceCanvas.width * (faceCanvas.height - 2) + 1) * 4 + j];
+            data[faceCanvas.width * (faceCanvas.height - 1) * 4 + j] = data[(faceCanvas.width * (faceCanvas.height - 2) + 1) * 4 + j];
             data[(faceCanvas.width * faceCanvas.height - 1) * 4 + j] = data[(faceCanvas.width * (faceCanvas.height - 1) - 2) * 4 + j];
           }
 
           // Draw image width duplicated edge pixels on canvas
           faceContext.putImageData(imgData, 0, 0);
 
-          incLoaded.call(this);
-        };
-        var incLoaded = function () {
-          if (this.width > 0) {
-            if (fallbackImgSize === undefined)
-              fallbackImgSize = this.width;
-            if (fallbackImgSize != this.width)
-              console.log('Fallback faces have inconsistent widths: ' + fallbackImgSize + ' vs. ' + this.width);
-          } else
-            faceMissing = true;
           loaded++;
           if (loaded == 6) {
             fallbackImgSize = this.width;
@@ -259,27 +192,23 @@ export default function (window, document, undefined) {
             callback();
           }
         };
-        faceMissing = false;
         for (s = 0; s < 6; s++) {
           var faceImg = new Image();
-          faceImg.crossOrigin = globalParams.crossOrigin ? globalParams.crossOrigin : 'anonymous';
+          faceImg.crossOrigin = 'anonymous';
           faceImg.side = s;
           faceImg.onload = onLoad;
-          faceImg.onerror = incLoaded; // ignore missing face to support partial fallback image
           if (imageType == 'multires') {
             faceImg.src = encodeURI(path.replace('%s', sides[s]) + '.' + image.extension);
           } else {
             faceImg.src = encodeURI(image[s].src);
           }
         }
-        fillMissingFaces(fallbackImgSize);
+
         return;
       } else if (!gl) {
         console.log('Error: no WebGL support detected!');
-        throw {type: 'no webgl'};
+        throw { type: 'no webgl' };
       }
-      if (imageType == 'cubemap')
-        fillMissingFaces(cubeImgWidth);
       if (image.basePath) {
         image.fullpath = image.basePath + image.path;
       } else {
@@ -295,30 +224,31 @@ export default function (window, document, undefined) {
       }
 
       // Make sure image isn't too big
-      var width = 0, maxWidth = 0;
+      var width, maxWidth;
       if (imageType == 'equirectangular') {
         width = Math.max(image.width, image.height);
         maxWidth = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+        if (width > maxWidth) {
+          console.log('Error: The image is too big; it\'s ' + width + 'px wide, but this device\'s maximum supported width is ' + maxWidth + 'px.');
+          throw { type: 'webgl size error', width: width, maxWidth: maxWidth };
+        }
       } else if (imageType == 'cubemap') {
-        width = cubeImgWidth;
+        width = image[0].width;
         maxWidth = gl.getParameter(gl.MAX_CUBE_MAP_TEXTURE_SIZE);
-      }
-      if (width > maxWidth) {
-        console.log('Error: The image is too big; it\'s ' + width + 'px wide, ' +
-          'but this device\'s maximum supported size is ' + maxWidth + 'px.');
-        throw {type: 'webgl size error', width: width, maxWidth: maxWidth};
+        if (width > maxWidth) {
+          console.log('Error: The cube face image is too big; it\'s ' + width + 'px wide, but this device\'s maximum supported width is ' + maxWidth + 'px.');
+          throw { type: 'webgl size error', width: width, maxWidth: maxWidth };
+        }
       }
 
       // Store horizon pitch and roll if applicable
-      if (params !== undefined && (params.horizonPitch !== undefined || params.horizonRoll !== undefined))
-        pose = [params.horizonPitch == undefined ? 0 : params.horizonPitch,
-          params.horizonRoll == undefined ? 0 : params.horizonRoll];
+      if (params !== undefined && (params.horizonPitch !== undefined || params.horizonRoll !== undefined)) pose = [params.horizonPitch == undefined ? 0 : params.horizonPitch, params.horizonRoll == undefined ? 0 : params.horizonRoll];
 
       // Set 2d texture binding
       var glBindType = gl.TEXTURE_2D;
 
       // Create viewport for entire canvas
-      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      gl.viewport(0, 0, canvas.width, canvas.height);
 
       // Create vertex shader
       vs = gl.createShader(gl.VERTEX_SHADER);
@@ -348,22 +278,14 @@ export default function (window, document, undefined) {
       gl.linkProgram(program);
 
       // Log errors
-      if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS))
-        console.log(gl.getShaderInfoLog(vs));
-      if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS))
-        console.log(gl.getShaderInfoLog(fs));
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS))
-        console.log(gl.getProgramInfoLog(program));
+      if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) console.log(gl.getShaderInfoLog(vs));
+      if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) console.log(gl.getShaderInfoLog(fs));
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) console.log(gl.getProgramInfoLog(program));
 
       // Use WebGL program
       gl.useProgram(program);
 
       program.drawInProgress = false;
-
-      // Set background clear color (does not apply to cubemap/fallback image)
-      var color = params.backgroundColor ? params.backgroundColor : [0, 0, 0];
-      gl.clearColor(color[0], color[1], color[2], 1.0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
 
       // Look up texture coordinates location
       program.texCoordLocation = gl.getAttribLocation(program, 'a_texCoord');
@@ -371,15 +293,14 @@ export default function (window, document, undefined) {
 
       if (imageType != 'multires') {
         // Provide texture coordinates for rectangle
-        if (!texCoordBuffer)
-          texCoordBuffer = gl.createBuffer();
+        if (!texCoordBuffer) texCoordBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 1, 1, 1, 1, -1, -1, 1, 1, -1, -1, -1]), gl.STATIC_DRAW);
         gl.vertexAttribPointer(program.texCoordLocation, 2, gl.FLOAT, false, 0, 0);
 
         // Pass aspect ratio
         program.aspectRatio = gl.getUniformLocation(program, 'u_aspectRatio');
-        gl.uniform1f(program.aspectRatio, gl.drawingBufferWidth / gl.drawingBufferHeight);
+        gl.uniform1f(program.aspectRatio, canvas.width / canvas.height);
 
         // Locate psi, theta, focal length, horizontal extent, vertical extent, and vertical offset
         program.psi = gl.getUniformLocation(program, 'u_psi');
@@ -398,6 +319,7 @@ export default function (window, document, undefined) {
         // Set background color
         if (imageType == 'equirectangular') {
           program.backgroundColor = gl.getUniformLocation(program, 'u_backgroundColor');
+          var color = params.backgroundColor ? params.backgroundColor : [0, 0, 0];
           gl.uniform4fv(program.backgroundColor, color.concat([1]));
         }
 
@@ -424,19 +346,15 @@ export default function (window, document, undefined) {
         gl.texParameteri(glBindType, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(glBindType, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(glBindType, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
       } else {
         // Look up vertex coordinates location
         program.vertPosLocation = gl.getAttribLocation(program, 'a_vertCoord');
         gl.enableVertexAttribArray(program.vertPosLocation);
 
         // Create buffers
-        if (!cubeVertBuf)
-          cubeVertBuf = gl.createBuffer();
-        if (!cubeVertTexCoordBuf)
-          cubeVertTexCoordBuf = gl.createBuffer();
-        if (!cubeVertIndBuf)
-          cubeVertIndBuf = gl.createBuffer();
+        if (!cubeVertBuf) cubeVertBuf = gl.createBuffer();
+        if (!cubeVertTexCoordBuf) cubeVertTexCoordBuf = gl.createBuffer();
+        if (!cubeVertIndBuf) cubeVertIndBuf = gl.createBuffer();
 
         // Bind texture coordinate buffer and pass coordinates to WebGL
         gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertTexCoordBuf);
@@ -459,10 +377,9 @@ export default function (window, document, undefined) {
       }
 
       // Check if there was an error
-      var err = gl.getError();
-      if (err !== 0) {
-        console.log('Error: Something went wrong with WebGL!', err);
-        throw {type: 'webgl error'};
+      if (gl.getError() !== 0) {
+        console.log('Error: Something went wrong with WebGL!');
+        throw { type: 'webgl error' };
       }
 
       callback();
@@ -475,10 +392,10 @@ export default function (window, document, undefined) {
      */
     this.destroy = function () {
       if (container !== undefined) {
-        if (canvas !== undefined && container.contains(canvas)) {
+        if (canvas !== undefined) {
           container.removeChild(canvas);
         }
-        if (world !== undefined && container.contains(world)) {
+        if (world !== undefined) {
           container.removeChild(world);
         }
       }
@@ -486,8 +403,7 @@ export default function (window, document, undefined) {
         // The spec says this is only supposed to simulate losing the WebGL
         // context, but in practice it tends to actually free the memory.
         var extension = gl.getExtension('WEBGL_lose_context');
-        if (extension)
-          extension.loseContext();
+        if (extension) extension.loseContext();
       }
     };
 
@@ -501,25 +417,14 @@ export default function (window, document, undefined) {
       canvas.width = canvas.clientWidth * pixelRatio;
       canvas.height = canvas.clientHeight * pixelRatio;
       if (gl) {
-        if (gl.getError() == 1286)
-          handleWebGLError1286();
-        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        gl.viewport(0, 0, canvas.width, canvas.height);
         if (imageType != 'multires') {
-          gl.uniform1f(program.aspectRatio, canvas.clientWidth / canvas.clientHeight);
+          gl.uniform1f(program.aspectRatio, canvas.width / canvas.height);
         }
       }
     };
     // Initialize canvas size
     this.resize();
-
-    /**
-     * Set renderer horizon pitch and roll.
-     * @memberof Renderer
-     * @instance
-     */
-    this.setPose = function (horizonPitch, horizonRoll) {
-      pose = [horizonPitch, horizonRoll];
-    };
 
     /**
      * Render new view of panorama.
@@ -533,11 +438,12 @@ export default function (window, document, undefined) {
      * @param {boolean} [params.returnImage] - Return rendered image?
      */
     this.render = function (pitch, yaw, hfov, params) {
-      var focal, i, s, roll = 0;
-      if (params === undefined)
-        params = {};
-      if (params.roll)
-        roll = params.roll;
+      var focal,
+        i,
+        s,
+        roll = 0;
+      if (params === undefined) params = {};
+      if (params.roll) roll = params.roll;
 
       // Apply pitch and roll transformation if applicable
       if (pose !== undefined) {
@@ -547,29 +453,17 @@ export default function (window, document, undefined) {
         // Calculate new pitch and yaw
         var orig_pitch = pitch,
           orig_yaw = yaw,
-          x = Math.cos(horizonRoll) * Math.sin(pitch) * Math.sin(horizonPitch) +
-            Math.cos(pitch) * (Math.cos(horizonPitch) * Math.cos(yaw) +
-              Math.sin(horizonRoll) * Math.sin(horizonPitch) * Math.sin(yaw)),
-          y = -Math.sin(pitch) * Math.sin(horizonRoll) +
-            Math.cos(pitch) * Math.cos(horizonRoll) * Math.sin(yaw),
-          z = Math.cos(horizonRoll) * Math.cos(horizonPitch) * Math.sin(pitch) +
-            Math.cos(pitch) * (-Math.cos(yaw) * Math.sin(horizonPitch) +
-              Math.cos(horizonPitch) * Math.sin(horizonRoll) * Math.sin(yaw));
+          x = Math.cos(horizonRoll) * Math.sin(pitch) * Math.sin(horizonPitch) + Math.cos(pitch) * (Math.cos(horizonPitch) * Math.cos(yaw) + Math.sin(horizonRoll) * Math.sin(horizonPitch) * Math.sin(yaw)),
+          y = -Math.sin(pitch) * Math.sin(horizonRoll) + Math.cos(pitch) * Math.cos(horizonRoll) * Math.sin(yaw),
+          z = Math.cos(horizonRoll) * Math.cos(horizonPitch) * Math.sin(pitch) + Math.cos(pitch) * (-Math.cos(yaw) * Math.sin(horizonPitch) + Math.cos(horizonPitch) * Math.sin(horizonRoll) * Math.sin(yaw));
         pitch = Math.asin(Math.max(Math.min(z, 1), -1));
         yaw = Math.atan2(y, x);
 
         // Calculate roll
-        var v = [Math.cos(orig_pitch) * (Math.sin(horizonRoll) * Math.sin(horizonPitch) * Math.cos(orig_yaw) -
-          Math.cos(horizonPitch) * Math.sin(orig_yaw)),
-            Math.cos(orig_pitch) * Math.cos(horizonRoll) * Math.cos(orig_yaw),
-            Math.cos(orig_pitch) * (Math.cos(horizonPitch) * Math.sin(horizonRoll) * Math.cos(orig_yaw) +
-              Math.sin(orig_yaw) * Math.sin(horizonPitch))],
+        var v = [Math.cos(orig_pitch) * (Math.sin(horizonRoll) * Math.sin(horizonPitch) * Math.cos(orig_yaw) - Math.cos(horizonPitch) * Math.sin(orig_yaw)), Math.cos(orig_pitch) * Math.cos(horizonRoll) * Math.cos(orig_yaw), Math.cos(orig_pitch) * (Math.cos(horizonPitch) * Math.sin(horizonRoll) * Math.cos(orig_yaw) + Math.sin(orig_yaw) * Math.sin(horizonPitch))],
           w = [-Math.cos(pitch) * Math.sin(yaw), Math.cos(pitch) * Math.cos(yaw)];
-        var roll_adj = Math.acos(Math.max(Math.min((v[0] * w[0] + v[1] * w[1]) /
-          (Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) *
-            Math.sqrt(w[0] * w[0] + w[1] * w[1])), 1), -1));
-        if (v[2] < 0)
-          roll_adj = 2 * Math.PI - roll_adj;
+        var roll_adj = Math.acos(Math.max(Math.min((v[0] * w[0] + v[1] * w[1]) / (Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) * Math.sqrt(w[0] * w[0] + w[1] * w[1])), 1), -1));
+        if (v[2] < 0) roll_adj = 2 * Math.PI - roll_adj;
         roll += roll_adj;
       }
 
@@ -587,24 +481,22 @@ export default function (window, document, undefined) {
           r: 'translate3d(' + s + 'px, -' + (s + 2) + 'px, -' + (s + 2) + 'px) rotateY(270deg)'
         };
         focal = 1 / Math.tan(hfov / 2);
-        var zoom = focal * canvas.clientWidth / 2 + 'px';
+        var zoom = focal * canvas.width / (window.devicePixelRatio || 1) / 2 + 'px';
         var transform = 'perspective(' + zoom + ') translateZ(' + zoom + ') rotateX(' + pitch + 'rad) rotateY(' + yaw + 'rad) ';
 
         // Apply face transforms
         var faces = Object.keys(transforms);
         for (i = 0; i < 6; i++) {
-          var face = world.querySelector('.pnlm-' + faces[i] + 'face');
-          if (!face)
-            continue; // ignore missing face to support partial cubemap/fallback image
-          face.style.webkitTransform = transform + transforms[faces[i]];
-          face.style.transform = transform + transforms[faces[i]];
+          var face = world.querySelector('.pnlm-' + faces[i] + 'face').style;
+          face.webkitTransform = transform + transforms[faces[i]];
+          face.transform = transform + transforms[faces[i]];
         }
         return;
       }
 
       if (imageType != 'multires') {
         // Calculate focal length from vertical field of view
-        var vfov = 2 * Math.atan(Math.tan(hfov * 0.5) / (gl.drawingBufferWidth / gl.drawingBufferHeight));
+        var vfov = 2 * Math.atan(Math.tan(hfov * 0.5) / (canvas.width / canvas.height));
         focal = 1 / Math.tan(vfov * 0.5);
 
         // Pass psi, theta, roll, and focal length
@@ -623,10 +515,9 @@ export default function (window, document, undefined) {
 
         // Draw using current buffer
         gl.drawArrays(gl.TRIANGLES, 0, 6);
-
       } else {
         // Create perspective matrix
-        var perspMatrix = makePersp(hfov, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.1, 100.0);
+        var perspMatrix = makePersp(hfov, canvas.width / canvas.height, 0.1, 100.0);
 
         // Find correct zoom level
         checkZoom(hfov);
@@ -645,8 +536,7 @@ export default function (window, document, undefined) {
         // Find current nodes
         var rotPersp = rotatePersp(perspMatrix, matrix);
         program.nodeCache.sort(multiresNodeSort);
-        if (program.nodeCache.length > 200 &&
-          program.nodeCache.length > program.currentNodes.length + 50) {
+        if (program.nodeCache.length > 200 && program.nodeCache.length > program.currentNodes.length + 50) {
           // Remove older nodes from cache
           var removed = program.nodeCache.splice(200, program.nodeCache.length - 200);
           for (var i = 0; i < removed.length; i++) {
@@ -665,7 +555,7 @@ export default function (window, document, undefined) {
         // Only process one tile per frame to improve responsiveness
         for (i = 0; i < program.currentNodes.length; i++) {
           if (!program.currentNodes[i].texture) {
-            setTimeout(processNextTile, 0, program.currentNodes[i]);
+            setTimeout(processNextTile(program.currentNodes[i]), 0);
             break;
           }
         }
@@ -750,9 +640,8 @@ export default function (window, document, undefined) {
     function multiresDraw() {
       if (!program.drawInProgress) {
         program.drawInProgress = true;
-        gl.clear(gl.COLOR_BUFFER_BIT);
         for (var i = 0; i < program.currentNodes.length; i++) {
-          if (program.currentNodes[i].textureLoaded > 1) {
+          if (program.currentNodes[i].textureLoaded) {
             //var color = program.currentNodes[i].color;
             //gl.uniform4f(program.colorUniform, color[0], color[1], color[2], 1.0);
 
@@ -815,7 +704,7 @@ export default function (window, document, undefined) {
         var theta = Math.asin(z / r);
         var phi = Math.atan2(y, x);
         var ydiff = phi - yaw;
-        ydiff += (ydiff > Math.PI) ? -2 * Math.PI : (ydiff < -Math.PI) ? 2 * Math.PI : 0;
+        ydiff += ydiff > Math.PI ? -2 * Math.PI : ydiff < -Math.PI ? 2 * Math.PI : 0;
         ydiff = Math.abs(ydiff);
         node.diff = Math.acos(Math.sin(pitch) * Math.sin(theta) + Math.cos(pitch) * Math.cos(theta) * Math.cos(ydiff));
 
@@ -843,7 +732,7 @@ export default function (window, document, undefined) {
           var cubeSize = image.cubeResolution * Math.pow(2, node.level - image.maxLevel);
           var numTiles = Math.ceil(cubeSize * image.invTileResolution) - 1;
           var doubleTileSize = cubeSize % image.tileResolution * 2;
-          var lastTileSize = (cubeSize * 2) % image.tileResolution;
+          var lastTileSize = cubeSize * 2 % image.tileResolution;
           if (lastTileSize === 0) {
             lastTileSize = image.tileResolution;
           }
@@ -857,7 +746,12 @@ export default function (window, document, undefined) {
           var i = 1.0 - f;
           var children = [];
           var vtmp, ntmp;
-          var f1 = f, f2 = f, f3 = f, i1 = i, i2 = i, i3 = i;
+          var f1 = f,
+            f2 = f,
+            f3 = f,
+            i1 = i,
+            i2 = i,
+            i3 = i;
           // Handle non-symmetric tiles
           if (lastTileSize < image.tileResolution) {
             if (node.x == numTiles && node.y != numTiles) {
@@ -896,38 +790,21 @@ export default function (window, document, undefined) {
             }
           }
 
-          vtmp = [v[0], v[1], v[2],
-            v[0] * f1 + v[3] * i1, v[1] * f + v[4] * i, v[2] * f3 + v[5] * i3,
-            v[0] * f1 + v[6] * i1, v[1] * f2 + v[7] * i2, v[2] * f3 + v[8] * i3,
-            v[0] * f + v[9] * i, v[1] * f2 + v[10] * i2, v[2] * f3 + v[11] * i3
-          ];
+          vtmp = [v[0], v[1], v[2], v[0] * f1 + v[3] * i1, v[1] * f + v[4] * i, v[2] * f3 + v[5] * i3, v[0] * f1 + v[6] * i1, v[1] * f2 + v[7] * i2, v[2] * f3 + v[8] * i3, v[0] * f + v[9] * i, v[1] * f2 + v[10] * i2, v[2] * f3 + v[11] * i3];
           ntmp = new MultiresNode(vtmp, node.side, node.level + 1, node.x * 2, node.y * 2, image.fullpath);
           children.push(ntmp);
           if (!(node.x == numTiles && doubleTileSize <= image.tileResolution)) {
-            vtmp = [v[0] * f1 + v[3] * i1, v[1] * f + v[4] * i, v[2] * f3 + v[5] * i3,
-              v[3], v[4], v[5],
-              v[3] * f + v[6] * i, v[4] * f2 + v[7] * i2, v[5] * f3 + v[8] * i3,
-              v[0] * f1 + v[6] * i1, v[1] * f2 + v[7] * i2, v[2] * f3 + v[8] * i3
-            ];
+            vtmp = [v[0] * f1 + v[3] * i1, v[1] * f + v[4] * i, v[2] * f3 + v[5] * i3, v[3], v[4], v[5], v[3] * f + v[6] * i, v[4] * f2 + v[7] * i2, v[5] * f3 + v[8] * i3, v[0] * f1 + v[6] * i1, v[1] * f2 + v[7] * i2, v[2] * f3 + v[8] * i3];
             ntmp = new MultiresNode(vtmp, node.side, node.level + 1, node.x * 2 + 1, node.y * 2, image.fullpath);
             children.push(ntmp);
           }
-          if (!(node.x == numTiles && doubleTileSize <= image.tileResolution) &&
-            !(node.y == numTiles && doubleTileSize <= image.tileResolution)) {
-            vtmp = [v[0] * f1 + v[6] * i1, v[1] * f2 + v[7] * i2, v[2] * f3 + v[8] * i3,
-              v[3] * f + v[6] * i, v[4] * f2 + v[7] * i2, v[5] * f3 + v[8] * i3,
-              v[6], v[7], v[8],
-              v[9] * f1 + v[6] * i1, v[10] * f + v[7] * i, v[11] * f3 + v[8] * i3
-            ];
+          if (!(node.x == numTiles && doubleTileSize <= image.tileResolution) && !(node.y == numTiles && doubleTileSize <= image.tileResolution)) {
+            vtmp = [v[0] * f1 + v[6] * i1, v[1] * f2 + v[7] * i2, v[2] * f3 + v[8] * i3, v[3] * f + v[6] * i, v[4] * f2 + v[7] * i2, v[5] * f3 + v[8] * i3, v[6], v[7], v[8], v[9] * f1 + v[6] * i1, v[10] * f + v[7] * i, v[11] * f3 + v[8] * i3];
             ntmp = new MultiresNode(vtmp, node.side, node.level + 1, node.x * 2 + 1, node.y * 2 + 1, image.fullpath);
             children.push(ntmp);
           }
           if (!(node.y == numTiles && doubleTileSize <= image.tileResolution)) {
-            vtmp = [v[0] * f + v[9] * i, v[1] * f2 + v[10] * i2, v[2] * f3 + v[11] * i3,
-              v[0] * f1 + v[6] * i1, v[1] * f2 + v[7] * i2, v[2] * f3 + v[8] * i3,
-              v[9] * f1 + v[6] * i1, v[10] * f + v[7] * i, v[11] * f3 + v[8] * i3,
-              v[9], v[10], v[11]
-            ];
+            vtmp = [v[0] * f + v[9] * i, v[1] * f2 + v[10] * i2, v[2] * f3 + v[11] * i3, v[0] * f1 + v[6] * i1, v[1] * f2 + v[7] * i2, v[2] * f3 + v[8] * i3, v[9] * f1 + v[6] * i1, v[10] * f + v[7] * i, v[11] * f3 + v[8] * i3, v[9], v[10], v[11]];
             ntmp = new MultiresNode(vtmp, node.side, node.level + 1, node.x * 2, node.y * 2 + 1, image.fullpath);
             children.push(ntmp);
           }
@@ -949,7 +826,7 @@ export default function (window, document, undefined) {
         -1, 1, 1, 1, 1, 1, 1, 1, -1, -1, 1, -1, // Up face
         -1, -1, -1, 1, -1, -1, 1, -1, 1, -1, -1, 1, // Down face
         -1, 1, 1, -1, 1, -1, -1, -1, -1, -1, -1, 1, // Left face
-        1, 1, -1, 1, 1, 1, 1, -1, 1, 1, -1, -1  // Right face
+        1, 1, -1, 1, 1, 1, 1, -1, 1, 1, -1, -1 // Right face
       ];
     }
 
@@ -959,11 +836,7 @@ export default function (window, document, undefined) {
      * @returns {number[]} Identity matrix.
      */
     function identityMatrix3() {
-      return [
-        1, 0, 0,
-        0, 1, 0,
-        0, 0, 1
-      ];
+      return [1, 0, 0, 0, 1, 0, 0, 0, 1];
     }
 
     /**
@@ -978,25 +851,13 @@ export default function (window, document, undefined) {
       var s = Math.sin(angle);
       var c = Math.cos(angle);
       if (axis == 'x') {
-        return [
-          m[0], c * m[1] + s * m[2], c * m[2] - s * m[1],
-          m[3], c * m[4] + s * m[5], c * m[5] - s * m[4],
-          m[6], c * m[7] + s * m[8], c * m[8] - s * m[7]
-        ];
+        return [m[0], c * m[1] + s * m[2], c * m[2] - s * m[1], m[3], c * m[4] + s * m[5], c * m[5] - s * m[4], m[6], c * m[7] + s * m[8], c * m[8] - s * m[7]];
       }
       if (axis == 'y') {
-        return [
-          c * m[0] - s * m[2], m[1], c * m[2] + s * m[0],
-          c * m[3] - s * m[5], m[4], c * m[5] + s * m[3],
-          c * m[6] - s * m[8], m[7], c * m[8] + s * m[6]
-        ];
+        return [c * m[0] - s * m[2], m[1], c * m[2] + s * m[0], c * m[3] - s * m[5], m[4], c * m[5] + s * m[3], c * m[6] - s * m[8], m[7], c * m[8] + s * m[6]];
       }
       if (axis == 'z') {
-        return [
-          c * m[0] + s * m[1], c * m[1] - s * m[0], m[2],
-          c * m[3] + s * m[4], c * m[4] - s * m[3], m[5],
-          c * m[6] + s * m[7], c * m[7] - s * m[6], m[8]
-        ];
+        return [c * m[0] + s * m[1], c * m[1] - s * m[0], m[2], c * m[3] + s * m[4], c * m[4] - s * m[3], m[5], c * m[6] + s * m[7], c * m[7] - s * m[6], m[8]];
       }
     }
 
@@ -1007,12 +868,7 @@ export default function (window, document, undefined) {
      * @returns {number[]} Expanded matrix.
      */
     function makeMatrix4(m) {
-      return [
-        m[0], m[1], m[2], 0,
-        m[3], m[4], m[5], 0,
-        m[6], m[7], m[8], 0,
-        0, 0, 0, 1
-      ];
+      return [m[0], m[1], m[2], 0, m[3], m[4], m[5], 0, m[6], m[7], m[8], 0, 0, 0, 0, 1];
     }
 
     /**
@@ -1022,12 +878,7 @@ export default function (window, document, undefined) {
      * @returns {number[]} Transposed matrix.
      */
     function transposeMatrix4(m) {
-      return [
-        m[0], m[4], m[8], m[12],
-        m[1], m[5], m[9], m[13],
-        m[2], m[6], m[10], m[14],
-        m[3], m[7], m[11], m[15]
-      ];
+      return [m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15]];
     }
 
     /**
@@ -1040,14 +891,9 @@ export default function (window, document, undefined) {
      * @returns {number[]} Generated perspective matrix.
      */
     function makePersp(hfov, aspect, znear, zfar) {
-      var fovy = 2 * Math.atan(Math.tan(hfov / 2) * gl.drawingBufferHeight / gl.drawingBufferWidth);
+      var fovy = 2 * Math.atan(Math.tan(hfov / 2) * canvas.height / canvas.width);
       var f = 1 / Math.tan(fovy / 2);
-      return [
-        f / aspect, 0, 0, 0,
-        0, f, 0, 0,
-        0, 0, (zfar + znear) / (znear - zfar), (2 * zfar * znear) / (znear - zfar),
-        0, 0, -1, 0
-      ];
+      return [f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (zfar + znear) / (znear - zfar), 2 * zfar * znear / (znear - zfar), 0, 0, -1, 0];
     }
 
     /**
@@ -1067,28 +913,21 @@ export default function (window, document, undefined) {
     }
 
     // Based on http://blog.tojicode.com/2012/03/javascript-memory-optimization-and.html
-    var loadTexture = (function () {
-      var cacheTop = 4;   // Maximum number of concurrents loads
+    var loadTexture = function () {
+      var cacheTop = 4; // Maximum number of concurrents loads
       var textureImageCache = {};
       var pendingTextureRequests = [];
-      var crossOrigin;
 
       function TextureImageLoader() {
         var self = this;
         this.texture = this.callback = null;
         this.image = new Image();
-        this.image.crossOrigin = crossOrigin ? crossOrigin : 'anonymous';
-        var loadFn = (function () {
-          if (self.image.width > 0 && self.image.height > 0) { // ignore missing tile to supporting partial image
-            processLoadedTexture(self.image, self.texture);
-            self.callback(self.texture, true);
-          } else {
-            self.callback(self.texture, false);
-          }
+        this.image.crossOrigin = 'anonymous';
+        this.image.addEventListener('load', function () {
+          processLoadedTexture(self.image, self.texture);
+          self.callback(self.texture);
           releaseTextureImageLoader(self);
         });
-        this.image.addEventListener('load', loadFn);
-        this.image.addEventListener('error', loadFn); // ignore missing tile file to support partial image, otherwise retry loop causes high CPU load
       };
 
       TextureImageLoader.prototype.loadTexture = function (src, texture, callback) {
@@ -1107,23 +946,17 @@ export default function (window, document, undefined) {
         if (pendingTextureRequests.length) {
           var req = pendingTextureRequests.shift();
           til.loadTexture(req.src, req.texture, req.callback);
-        } else
-          textureImageCache[cacheTop++] = til;
+        } else textureImageCache[cacheTop++] = til;
       }
 
-      for (var i = 0; i < cacheTop; i++)
+      for (var i = 0; i < cacheTop; i++) {
         textureImageCache[i] = new TextureImageLoader();
-
-      return function (src, callback, _crossOrigin) {
-        crossOrigin = _crossOrigin;
+      }return function (src, callback) {
         var texture = gl.createTexture();
-        if (cacheTop)
-          textureImageCache[--cacheTop].loadTexture(src, texture, callback);
-        else
-          pendingTextureRequests.push(new PendingTextureRequest(src, texture, callback));
+        if (cacheTop) textureImageCache[--cacheTop].loadTexture(src, texture, callback);else pendingTextureRequests.push(new PendingTextureRequest(src, texture, callback));
         return texture;
       };
-    })();
+    }();
 
     /**
      * Loads image and creates texture for a multires node / tile.
@@ -1133,10 +966,10 @@ export default function (window, document, undefined) {
     function processNextTile(node) {
       if (!node.textureLoad) {
         node.textureLoad = true;
-        loadTexture(encodeURI(node.path + '.' + image.extension), function (texture, loaded) {
+        loadTexture(encodeURI(node.path + '.' + image.extension), function (texture) {
           node.texture = texture;
-          node.textureLoaded = loaded ? 2 : 1;
-        }, globalParams.crossOrigin);
+          node.textureLoaded = true;
+        });
       }
     }
 
@@ -1148,9 +981,7 @@ export default function (window, document, undefined) {
     function checkZoom(hfov) {
       // Find optimal level
       var newLevel = 1;
-      while (newLevel < image.maxLevel &&
-      gl.drawingBufferWidth > image.tileResolution *
-      Math.pow(2, newLevel - 1) * Math.tan(hfov / 2) * 0.707) {
+      while (newLevel < image.maxLevel && canvas.width > image.tileResolution * Math.pow(2, newLevel - 1) * Math.tan(hfov / 2) * 0.707) {
         newLevel++;
       }
 
@@ -1166,12 +997,7 @@ export default function (window, document, undefined) {
      * @returns {number[]} Rotated matrix.
      */
     function rotatePersp(p, r) {
-      return [
-        p[0] * r[0], p[0] * r[1], p[0] * r[2], 0,
-        p[5] * r[4], p[5] * r[5], p[5] * r[6], 0,
-        p[10] * r[8], p[10] * r[9], p[10] * r[10], p[11],
-        -r[8], -r[9], -r[10], 0
-      ];
+      return [p[0] * r[0], p[0] * r[1], p[0] * r[2], 0, p[5] * r[4], p[5] * r[5], p[5] * r[6], 0, p[10] * r[8], p[10] * r[9], p[10] * r[10], p[11], -r[8], -r[9], -r[10], 0];
     }
 
     /**
@@ -1183,12 +1009,7 @@ export default function (window, document, undefined) {
      * @returns {number[]} Resulting 4-vector.
      */
     function applyRotPerspToVec(m, v) {
-      return [
-        m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
-        m[4] * v[0] + m[5] * v[1] + m[6] * v[2],
-        m[11] + m[8] * v[0] + m[9] * v[1] + m[10] * v[2],
-        1 / (m[12] * v[0] + m[13] * v[1] + m[14] * v[2])
-      ];
+      return [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[4] * v[0] + m[5] * v[1] + m[6] * v[2], m[11] + m[8] * v[0] + m[9] * v[1] + m[10] * v[2], 1 / (m[12] * v[0] + m[13] * v[1] + m[14] * v[2])];
     }
 
     /**
@@ -1206,16 +1027,11 @@ export default function (window, document, undefined) {
       var winZ = vpp[2] * vpp[3];
       var ret = [0, 0, 0];
 
-      if (winX < -1)
-        ret[0] = -1;
-      if (winX > 1)
-        ret[0] = 1;
-      if (winY < -1)
-        ret[1] = -1;
-      if (winY > 1)
-        ret[1] = 1;
-      if (winZ < -1 || winZ > 1)
-        ret[2] = 1;
+      if (winX < -1) ret[0] = -1;
+      if (winX > 1) ret[0] = 1;
+      if (winY < -1) ret[1] = -1;
+      if (winY > 1) ret[1] = 1;
+      if (winZ < -1 || winZ > 1) ret[2] = 1;
       return ret;
     }
 
@@ -1232,113 +1048,50 @@ export default function (window, document, undefined) {
       var check3 = checkInView(m, v.slice(6, 9));
       var check4 = checkInView(m, v.slice(9, 12));
       var testX = check1[0] + check2[0] + check3[0] + check4[0];
-      if (testX == -4 || testX == 4)
-        return false;
+      if (testX == -4 || testX == 4) return false;
       var testY = check1[1] + check2[1] + check3[1] + check4[1];
-      if (testY == -4 || testY == 4)
-        return false;
+      if (testY == -4 || testY == 4) return false;
       var testZ = check1[2] + check2[2] + check3[2] + check4[2];
       return testZ != 4;
-
-
-    }
-
-    /**
-     * On iOS (iPhone 5c, iOS 10.3), this WebGL error occurs when the canvas is
-     * too big. Unfortuately, there's no way to test for this beforehand, so we
-     * reduce the canvas size if this error is thrown.
-     * @private
-     */
-    function handleWebGLError1286() {
-      console.log('Reducing canvas size due to error 1286!');
-      canvas.width = Math.round(canvas.width / 2);
-      canvas.height = Math.round(canvas.height / 2);
     }
   }
 
-// Vertex shader for equirectangular and cube
-  var v = [
-    'attribute vec2 a_texCoord;',
-    'varying vec2 v_texCoord;',
-
-    'void main() {',
+  // Vertex shader for equirectangular and cube
+  var v = ['attribute vec2 a_texCoord;', 'varying vec2 v_texCoord;', 'void main() {',
     // Set position
     'gl_Position = vec4(a_texCoord, 0.0, 1.0);',
 
     // Pass the coordinates to the fragment shader
-    'v_texCoord = a_texCoord;',
-    '}'
-  ].join('');
+    'v_texCoord = a_texCoord;', '}'].join('');
 
-// Vertex shader for multires
-  var vMulti = [
-    'attribute vec3 a_vertCoord;',
-    'attribute vec2 a_texCoord;',
-
-    'uniform mat4 u_cubeMatrix;',
-    'uniform mat4 u_perspMatrix;',
-
-    'varying mediump vec2 v_texCoord;',
-
-    'void main(void) {',
+  // Vertex shader for multires
+  var vMulti = ['attribute vec3 a_vertCoord;', 'attribute vec2 a_texCoord;', 'uniform mat4 u_cubeMatrix;', 'uniform mat4 u_perspMatrix;', 'varying mediump vec2 v_texCoord;', 'void main(void) {',
     // Set position
     'gl_Position = u_perspMatrix * u_cubeMatrix * vec4(a_vertCoord, 1.0);',
 
     // Pass the coordinates to the fragment shader
-    'v_texCoord = a_texCoord;',
-    '}'
-  ].join('');
+    'v_texCoord = a_texCoord;', '}'].join('');
 
-// Fragment shader
-  var fragEquiCubeBase = [
-    'precision mediump float;',
+  // Fragment shader
+  var fragEquiCubeBase = ['precision mediump float;', 'uniform float u_aspectRatio;', 'uniform float u_psi;', 'uniform float u_theta;', 'uniform float u_f;', 'uniform float u_h;', 'uniform float u_v;', 'uniform float u_vo;', 'uniform float u_rot;', 'const float PI = 3.14159265358979323846264;',
 
-    'uniform float u_aspectRatio;',
-    'uniform float u_psi;',
-    'uniform float u_theta;',
-    'uniform float u_f;',
-    'uniform float u_h;',
-    'uniform float u_v;',
-    'uniform float u_vo;',
-    'uniform float u_rot;',
+    // Texture
+    'uniform sampler2D u_image;', 'uniform samplerCube u_imageCube;',
 
-    'const float PI = 3.14159265358979323846264;',
-
-// Texture
-    'uniform sampler2D u_image;',
-    'uniform samplerCube u_imageCube;',
-
-// Coordinates passed in from vertex shader
+    // Coordinates passed in from vertex shader
     'varying vec2 v_texCoord;',
 
-// Background color (display for partial panoramas)
-    'uniform vec4 u_backgroundColor;',
-
-    'void main() {',
+    // Background color (display for partial panoramas)
+    'uniform vec4 u_backgroundColor;', 'void main() {',
     // Map canvas/camera to sphere
-    'float x = v_texCoord.x * u_aspectRatio;',
-    'float y = v_texCoord.y;',
-    'float sinrot = sin(u_rot);',
-    'float cosrot = cos(u_rot);',
-    'float rot_x = x * cosrot - y * sinrot;',
-    'float rot_y = x * sinrot + y * cosrot;',
-    'float sintheta = sin(u_theta);',
-    'float costheta = cos(u_theta);',
-    'float a = u_f * costheta - rot_y * sintheta;',
-    'float root = sqrt(rot_x * rot_x + a * a);',
-    'float lambda = atan(rot_x / root, a / root) + u_psi;',
-    'float phi = atan((rot_y * costheta + u_f * sintheta) / root);',
-  ].join('\n');
+    'float x = v_texCoord.x * u_aspectRatio;', 'float y = v_texCoord.y;', 'float sinrot = sin(u_rot);', 'float cosrot = cos(u_rot);', 'float rot_x = x * cosrot - y * sinrot;', 'float rot_y = x * sinrot + y * cosrot;', 'float sintheta = sin(u_theta);', 'float costheta = cos(u_theta);', 'float a = u_f * costheta - rot_y * sintheta;', 'float root = sqrt(rot_x * rot_x + a * a);', 'float lambda = atan(rot_x / root, a / root) + u_psi;', 'float phi = atan((rot_y * costheta + u_f * sintheta) / root);'].join('\n');
 
-// Fragment shader
+  // Fragment shader
   var fragCube = fragEquiCubeBase + [
     // Look up color from texture
-    'float cosphi = cos(phi);',
-    'gl_FragColor = textureCube(u_imageCube, vec3(cosphi*sin(lambda), sin(phi), cosphi*cos(lambda)));',
-    '}'
-  ].join('\n');
+    'float cosphi = cos(phi);', 'gl_FragColor = textureCube(u_imageCube, vec3(cosphi*sin(lambda), sin(phi), cosphi*cos(lambda)));', '}'].join('\n');
 
-// Fragment shader
+  // Fragment shader
   var fragEquirectangular = fragEquiCubeBase + [
     // Wrap image
     'lambda = mod(lambda + PI, PI * 2.0) - PI;',
@@ -1348,30 +1101,21 @@ export default function (window, document, undefined) {
 
     // Look up color from texture
     // Map from [-1,1] to [0,1] and flip y-axis
-    'if(coord.x < -u_h || coord.x > u_h || coord.y < -u_v + u_vo || coord.y > u_v + u_vo)',
-    'gl_FragColor = u_backgroundColor;',
-    'else',
-    'gl_FragColor = texture2D(u_image, vec2((coord.x + u_h) / (u_h * 2.0), (-coord.y + u_v + u_vo) / (u_v * 2.0)));',
-    '}'
-  ].join('\n');
+    'if(coord.x < -u_h || coord.x > u_h || coord.y < -u_v + u_vo || coord.y > u_v + u_vo)', 'gl_FragColor = u_backgroundColor;', 'else', 'gl_FragColor = texture2D(u_image, vec2((coord.x + u_h) / (u_h * 2.0), (-coord.y + u_v + u_vo) / (u_v * 2.0)));', '}'].join('\n');
 
-// Fragment shader
-  var fragMulti = [
-    'varying mediump vec2 v_texCoord;',
-    'uniform sampler2D u_sampler;',
-//'uniform mediump vec4 u_color;',
+  // Fragment shader
+  var fragMulti = ['varying mediump vec2 v_texCoord;', 'uniform sampler2D u_sampler;',
+    //'uniform mediump vec4 u_color;',
 
     'void main(void) {',
     // Look up color from texture
     'gl_FragColor = texture2D(u_sampler, v_texCoord);',
-//    'gl_FragColor = u_color;',
-    '}'
-  ].join('');
+    //    'gl_FragColor = u_color;',
+    '}'].join('');
 
   return {
-    renderer: function (container, image, imagetype, dynamic) {
+    renderer: function renderer(container, image, imagetype, dynamic) {
       return new Renderer(container, image, imagetype, dynamic);
     }
   };
-}
-(window, document);
+}(window, document);

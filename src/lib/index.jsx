@@ -39,16 +39,6 @@ class Panellum extends Component {
   }
 
   initPanellum = () => {
-    const strings = {};
-
-    if (this.props.loadButtonLabel) {
-      strings.loadButtonLabel = this.props.loadButtonLabel;
-    }
-
-    if (this.props.loadingLabel) {
-      strings.loadingLabel = this.props.loadingLabel;
-    }
-
     window.pannellum.viewer('pano-image', {
       type: 'equirectangular',
       panorama: this.props.imagePath,
@@ -57,8 +47,7 @@ class Panellum extends Component {
       showControls: this.props.showControls,
       showZoomCtrl: this.props.showZoomCtrl,
       showFullScreenCtrl: this.props.showFullScreenCtrl,
-      mouseZoom: this.props.mouseZoom,
-      strings
+      mouseZoom: this.props.mouseZoom
     });
   };
 
