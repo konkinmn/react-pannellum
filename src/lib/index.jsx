@@ -1,5 +1,5 @@
-import React, { Component } from 'react';
-import { PanoView, Container } from './styles';
+import React, {Component} from 'react';
+import {PanoView, Container} from './styles';
 
 import './pannellum.css';
 
@@ -10,13 +10,15 @@ const Pannellum = CAN_USE_DOM ? require('./global-pannelum-scripts/pannellum.js'
 
 class Panellum extends Component {
   static defaultProps = {
-    imagePath         : 'https://pannellum.org/images/alma.jpg',
-    autoLoad          : false,
-    preview           : '',
-    showControls      : false,
-    showZoomCtrl      : false,
+    imagePath: 'https://pannellum.org/images/alma.jpg',
+    autoLoad: false,
+    preview: '',
+    loadingLabel: null,
+    loadButtonLabel: null,
+    showControls: false,
+    showZoomCtrl: false,
     showFullScreenCtrl: false,
-    mouseZoom         : false
+    mouseZoom: false
   };
 
   componentDidMount() {
@@ -26,23 +28,44 @@ class Panellum extends Component {
 
     window.libpannellum = LibPannellum(window, document);
     window.pannellum = Pannellum(window, document);
-
-    window.pannellum.viewer('pano-image', {
-      type              : 'equirectangular',
-      panorama          : this.props.imagePath,
-      autoLoad          : this.props.autoLoad,
-      preview           : this.props.preview,
-      showControls      : this.props.showControls,
-      showZoomCtrl      : this.props.showZoomCtrl,
-      showFullScreenCtrl: this.props.showFullScreenCtrl,
-      mouseZoom         : false
-    });
+    this.initPanellum();
   }
 
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.imagePath !== this.props.imagePath) {
+      this.initPanellum();
+    }
+  }
+
+  initPanellum = () => {
+    const strings = {};
+
+    if (this.props.loadButtonLabel) {
+      strings.loadButtonLabel = this.props.loadButtonLabel;
+    }
+
+    if (this.props.loadingLabel) {
+      strings.loadingLabel = this.props.loadingLabel;
+    }
+
+    window.pannellum.viewer('pano-image', {
+      type: 'equirectangular',
+      panorama: this.props.imagePath,
+      autoLoad: this.props.autoLoad,
+      preview: this.props.preview,
+      showControls: this.props.showControls,
+      showZoomCtrl: this.props.showZoomCtrl,
+      showFullScreenCtrl: this.props.showFullScreenCtrl,
+      mouseZoom: this.props.mouseZoom,
+      strings
+    });
+  };
+
   render() {
-    const { width, height } = this.props;
+    const {width, height} = this.props;
     return (
-      <Container width={ width } height={ height }>
+      <Container width={width} height={height}>
         <PanoView id="pano-image"/>
       </Container>
     );
