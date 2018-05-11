@@ -12,6 +12,7 @@ class Panellum extends Component {
   static defaultProps = {
     imagePath: 'https://pannellum.org/images/alma.jpg',
     autoLoad: false,
+    autoRotate: 0,
     preview: '',
     loadingLabel: null,
     loadButtonLabel: null,
@@ -43,6 +44,7 @@ class Panellum extends Component {
       type: 'equirectangular',
       panorama: this.props.imagePath,
       autoLoad: this.props.autoLoad,
+      autoRotate: this.props.autoRotate,
       preview: this.props.preview,
       showControls: this.props.showControls,
       showZoomCtrl: this.props.showZoomCtrl,
