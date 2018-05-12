@@ -10,10 +10,6 @@ const LibPannellum = CAN_USE_DOM ? require('./global-pannelum-scripts/libpannell
 const Pannellum = CAN_USE_DOM ? require('./global-pannelum-scripts/pannellum.js').default : null;
 
 class Panellum extends Component {
-  state = {
-    gyroPresent: false
-  };
-
   static defaultProps = {
     imagePath: ' https://pannellum.org/images/alma.jpg',
     title: '',
@@ -64,13 +60,6 @@ class Panellum extends Component {
       return;
     }
 
-    window.addEventListener("devicemotion", function (event) {
-      if (event.rotationRate.alpha || event.rotationRate.beta || event.rotationRate.gamma)
-        this.setState({
-          gyroPresent: true
-        });
-    });
-
     window.libpannellum = LibPannellum(window, document);
     window.pannellum = Pannellum(window, document);
     this.initPanellum();
@@ -99,7 +88,7 @@ class Panellum extends Component {
       this.props.autoRotateInactivityDelay && { autoRotateInactivityDelay: this.props.autoRotateInactivityDelay },
       this.props.autoRotateStopDelay && { autoRotateStopDelay: this.props.autoRotateStopDelay },
       this.props.fallback && { fallback: this.props.fallback },
-      this.props.orientationOnByDefault && this.state.gyroPresent && { orientationOnByDefault: this.props.orientationOnByDefault },
+      this.props.orientationOnByDefault && { orientationOnByDefault: this.props.orientationOnByDefault },
       this.props.showZoomCtrl && { showZoomCtrl: this.props.showZoomCtrl },
       this.props.keyboardZoom && { keyboardZoom: this.props.keyboardZoom },
       this.props.mouseZoom && { mouseZoom: this.props.mouseZoom },
