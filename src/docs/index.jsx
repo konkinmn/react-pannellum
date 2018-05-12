@@ -11,7 +11,12 @@ class Demo extends Component {
     return (
       <div>
         <h1>Demo with examples of the Pannellum react component</h1>
-            <Panellum imagePath={this.state.image} autoLoad={true} autoRotate={5}/>
+            <Panellum
+                imagePath={this.state.image}
+                autoLoad={true}
+                autoRotate={-2}
+                autoRotateInactivityDelay={2000}
+            />
         <button onClick={ () => this.setState({ image: 'https://pannellum.org/images/alma.jpg' }) }>click</button>
       </div>
     );
