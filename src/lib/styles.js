@@ -10,6 +10,6 @@ export const PanoView = styled.div`
 	position: absolute;
   width: 100%;
   height: 100%;
-  max-width: 1200px;
-  max-height: 1000px;
+  max-width: ${ ({ maxWidth }) => maxWidth ? maxWidth : '100%' };
+  max-height: ${ ({ maxHeight }) => maxHeight ? maxHeight : '100%' };
 `;

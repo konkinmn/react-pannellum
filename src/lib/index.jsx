@@ -3,13 +3,11 @@ require('es6-object-assign').polyfill();
 import React, {Component} from 'react';
 import { PanoView, Container } from './styles';
 
-
 import './pannellum.css';
 
 const CAN_USE_DOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
 const LibPannellum = CAN_USE_DOM ? require('./global-pannelum-scripts/libpannellum.js').default : null;
 const Pannellum = CAN_USE_DOM ? require('./global-pannelum-scripts/pannellum.js').default : null;
-
 
 class Panellum extends Component {
   state = {
@@ -90,6 +88,7 @@ class Panellum extends Component {
       type: 'equirectangular',
       panorama: this.props.imagePath
     };
+
     Object.assign(config,
       this.props.title && { title: this.props.title },
       this.props.author && { author: this.props.author },
@@ -137,10 +136,12 @@ class Panellum extends Component {
   };
 
   render() {
-    const {width, height} = this.props;
+    const {width, height, maxWidth, maxHeight} = this.props;
     return (
       <Container width={width} height={height}>
-        <PanoView id="pano-image"/>
+        <PanoView maxWidth={ maxWidth }
+                  maxHeight={ maxHeight }
+                  id="pano-image"/>
       </Container>
     );
   }

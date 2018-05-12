@@ -1,5 +1,5 @@
 import React, {Component} from "react";
-import { render } from "react-dom";
+import {render} from "react-dom";
 import Panellum from "../lib";
 
 class Demo extends Component {
@@ -11,16 +11,18 @@ class Demo extends Component {
     return (
       <div>
         <h1>Demo with examples of the Pannellum react component</h1>
-            <Panellum
-                imagePath={this.state.image}
-                autoLoad={true}
-                autoRotate={-2}
-                autoRotateInactivityDelay={2000}
-            />
-        <button onClick={ () => this.setState({ image: 'https://pannellum.org/images/alma.jpg' }) }>click</button>
+        <Panellum
+          imagePath={this.state.image}
+          autoLoad={true}
+          autoRotate={-2}
+          autoRotateInactivityDelay={2000}
+          maxWidth={'1200px'}
+          maxHeight={'1000px'}
+        />
+        <button onClick={() => this.setState({image: 'https://pannellum.org/images/alma.jpg'})}>click</button>
       </div>
     );
   }
 }
 
-render(<Demo />, document.getElementById("app"));
+render(<Demo/>, document.getElementById("app"));
