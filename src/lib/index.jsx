@@ -77,7 +77,8 @@ class Panellum extends Component {
   initPanellum = () => {
     let config = {
       type: 'equirectangular',
-      panorama: this.props.imagePath
+      panorama: this.props.imagePath,
+      hotSpots: this.props.hotSpots,
     };
 
     Object.assign(config,
